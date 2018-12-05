@@ -9,10 +9,12 @@ import os
 import pandas as pd
 import pprint as pp
 import matplotlib.pyplot as plt
-"""
-Test_test
+import config as cfg
 
-"""
+a = cfg.get('general_data', 'interest_rate')
+print(a+3)
+
+
 ##########################################################################
 # Initialize the energy system and read/calculate necessary parameters
 ##########################################################################
@@ -28,8 +30,12 @@ energysystem = solph.EnergySystem(timeindex=date_time_index)
 #Read Data-file
 data = pd.read_csv("test-data_normiert.csv", sep=";")
 #data_2 = pd.read_csv("Test.csv", sep=";")
+#timeseries = pd.read_csv(
+#        r"C:\Users\jroeder\Seafile\Meine Bibliothek\c_oemof_work\05_github\demo_data",
+#        'test-data_normiert.csv')
 
 # demand factors
+
 factor_heat = 1598.3           # 1 (=1 kW peak) entspricht 3239,9 kWh
 factor_elec = 196.2           # 1 (=1 kW peak) entspricht 6116,2 kWh
 factor_H2 = 0               # Skalierungsfaktor H2-Bedarf
@@ -47,22 +53,21 @@ CO2_elec_off = 0        # Einheit: kg / kWh
 CO2_elec = 0.6          # Einheit: kg / kWh
 CO2_gas = 0.2           # Einehit: kg / kWh-lower heating value
 
-Zins = 0.05
 
 
-epc_storage_heat = economics.annuity(capex=20, n=25, wacc=Zins)*number_timesteps/8760
-epc_storage_elec = economics.annuity(capex=450, n=15, wacc=Zins)*number_timesteps/8760
-epc_storage_H2 = economics.annuity(capex=1, n=20, wacc=Zins)*number_timesteps/8760
+epc_storage_heat = economics.annuity(capex=20, n=25, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+epc_storage_elec = economics.annuity(capex=450, n=15, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+epc_storage_H2 = economics.annuity(capex=1, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
-epc_chp_gas = economics.annuity(capex=280, n=15, wacc=Zins)*number_timesteps/8760
-epc_boiler_gas = economics.annuity(capex=70, n=20, wacc=0.05)*number_timesteps/8760
-epc_heatpump_el = economics.annuity(capex=250, n=20, wacc=0.05)*number_timesteps/8760
-#epc_heating_rod = economics.annuity(capex=10, n=20, wacc=0.05)*number_timesteps/8760
-epc_electrolysis_pem = economics.annuity(capex=1, n=20, wacc=0.05)*number_timesteps/8760
-epc_chp_H2 = economics.annuity(capex=1, n=15, wacc=0.05)*number_timesteps/8760
+epc_chp_gas = economics.annuity(capex=280, n=15, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+epc_boiler_gas = economics.annuity(capex=70, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+epc_heatpump_el = economics.annuity(capex=250, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+#epc_heating_rod = economics.annuity(capex=10, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+epc_electrolysis_pem = economics.annuity(capex=1, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+epc_chp_H2 = economics.annuity(capex=1, n=15, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
-#epc_pv = economics.annuity(capex=10, n=20, wacc=0.05)*number_timesteps/8760
-#epc_solar_thermal = economics.annuity(capex=10, n=20, wacc=0.05)*number_timesteps/8760
+#epc_pv = economics.annuity(capex=10, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+#epc_solar_thermal = economics.annuity(capex=10, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
 ##########################################################################
 # Create oemof objects
@@ -344,32 +349,22 @@ if plt is not None:
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=3, mode="expand", borderaxespad=0.)
     #ax.legend(loc='upper center')
-    mng = plt.get_current_fig_manager()
-    mng.window.showMaximized()
     plt.show()
     Elec_off_bus.plot(kind='line', drawstyle='steps-post')
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=3, mode="expand", borderaxespad=0.)
-    mng = plt.get_current_fig_manager()
-    mng.window.showMaximized()
     plt.show()
     gas_bus.plot(kind='line', drawstyle='steps-post')
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=3, mode="expand", borderaxespad=0.)
-    mng = plt.get_current_fig_manager()
-    mng.window.showMaximized()
     plt.show()
     heat_bus.plot(kind='line', drawstyle='steps-post')
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=3, mode="expand", borderaxespad=0.)
-    mng = plt.get_current_fig_manager()
-    mng.window.showMaximized()
     plt.show()
     H2_bus.plot(kind='line', drawstyle='steps-post')
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=3, mode="expand", borderaxespad=0.)
-    mng = plt.get_current_fig_manager()
-    mng.window.showMaximized()
     plt.show()
 
 # print the solver results
@@ -398,8 +393,6 @@ x = ['chp_gas', 'chp_H2', 'electrolysis', 'gas boiler', 'Heatpump']
 width = 1/2
 plt.bar(x, y, width, color="blue")
 plt.ylabel('Installierte Leistung [kW]')
-mng = plt.get_current_fig_manager()
-mng.window.showMaximized()
 plt.show()
 # storages capacities
 c_storage_elec = outputlib.views.node(results, 'storage_elec')["scalars"][1]
@@ -411,8 +404,6 @@ x = ['storage_elec', 'storage_heat', 'storage_H2']
 width = 1/2
 plt.bar(x, y, width, color="blue")
 plt.ylabel('Kapazität [kWh]')
-mng = plt.get_current_fig_manager()
-mng.window.showMaximized()
 plt.show()
 
 print('test')
@@ -422,6 +413,6 @@ print(w)
 df_invest_ges = pd.DataFrame([[p_chp_gas, p_chp_H2, p_electrolysis_pem, p_boiler_gas, p_heatpump_el, c_storage_elec, c_storage_heat, c_storgae_H2]], columns=['p_chp_gas', 'p_chp_H2', 'p_electrolysis_pem', 'p_boiler_gas', 'p_heatpump_el', 'c_storage_elec', 'c_storage_heat', 'c_storgae_H2'])
 
 # the result_gesamt df is exported in excel
-with pd.ExcelWriter('Results.xlsx') as xls:
-    df_ges.to_excel(xls, sheet_name = 'Timeseries')
-    df_invest_ges.to_excel(xls, sheet_name = 'Invest')
+#with pd.ExcelWriter('Results.xlsx') as xls:
+#    df_ges.to_excel(xls, sheet_name = 'Timeseries')
+#    df_invest_ges.to_excel(xls, sheet_name = 'Invest')
