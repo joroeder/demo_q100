@@ -11,17 +11,13 @@ import pprint as pp
 import matplotlib.pyplot as plt
 import config as cfg
 
-a = cfg.get('general_data', 'interest_rate')
-print(a+3)
-
-
 ##########################################################################
 # Initialize the energy system and read/calculate necessary parameters
 ##########################################################################
 
 logger.define_logging()
 logging.info('Initialize the energy system')
-number_timesteps = 744 # Einheit ist derzeit h
+number_timesteps = cfg.get('general_data', 'number_timesteps')
 date_time_index = pd.date_range('1/1/2012',
                                 periods=number_timesteps,
                                 freq='H')
@@ -34,48 +30,52 @@ data = pd.read_csv("test-data_normiert.csv", sep=";")
 #        r"C:\Users\jroeder\Seafile\Meine Bibliothek\c_oemof_work\05_github\demo_data",
 #        'test-data_normiert.csv')
 
-# demand factors
+# economic data of transformers and storages
+epc_storage_heat = economics.annuity(
+    capex=cfg.get('fix_costs', 'storage_heat'),
+    n=cfg.get('lifetime', 'storage_heat'),
+    wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+        
+epc_storage_elec = economics.annuity(
+    capex=cfg.get('fix_costs', 'storage_elec'),
+    n=cfg.get('lifetime', 'storage_elec'),
+    wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
-factor_heat = 1598.3           # 1 (=1 kW peak) entspricht 3239,9 kWh
-factor_elec = 196.2           # 1 (=1 kW peak) entspricht 6116,2 kWh
-factor_H2 = 0               # Skalierungsfaktor H2-Bedarf
+epc_storage_H2 = economics.annuity(
+    capex=cfg.get('fix_costs', 'storage_H2'),
+    n=cfg.get('lifetime', 'storage_H2'),
+    wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
-# source factors
-factor_elec_off = 24061     # 1 (=1 kW peak) entspricht 686,55 kWh, Trafo-Heide: 24061 kW
+epc_chp_gas = economics.annuity(
+    capex=cfg.get('fix_costs', 'chp_gas'),
+    n=cfg.get('lifetime', 'chp_gas'),
+    wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
-## scenario data
-# prices
-price_elec_off = 0.03    # Einheit: € / kWh
-price_elec = 0.21       # Einheit: € / kWh
-price_gas = 0.054        # Einehit: € / kWh-lower heating value
-# CO2 Emissions
-CO2_elec_off = 0        # Einheit: kg / kWh
-CO2_elec = 0.6          # Einheit: kg / kWh
-CO2_gas = 0.2           # Einehit: kg / kWh-lower heating value
+epc_boiler_gas = economics.annuity(
+    capex=cfg.get('fix_costs', 'boiler_gas'),
+    n=cfg.get('lifetime', 'boiler_gas'),
+    wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
+epc_heatpump_el = economics.annuity(
+    capex=cfg.get('fix_costs', 'heatpump_el'),
+    n=cfg.get('lifetime', 'heatpump_el'),
+    wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
+epc_electrolysis_pem = economics.annuity(
+    capex=cfg.get('fix_costs', 'electrolysis_pem'),
+    n=cfg.get('lifetime', 'electrolysis_pem'),
+    wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
-epc_storage_heat = economics.annuity(capex=20, n=25, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-epc_storage_elec = economics.annuity(capex=450, n=15, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-epc_storage_H2 = economics.annuity(capex=1, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
+epc_chp_H2 = economics.annuity(
+    capex=cfg.get('fix_costs', 'chp_H2'),
+    n=cfg.get('lifetime', 'chp_H2'),
+    wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
 
-epc_chp_gas = economics.annuity(capex=280, n=15, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-epc_boiler_gas = economics.annuity(capex=70, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-epc_heatpump_el = economics.annuity(capex=250, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-#epc_heating_rod = economics.annuity(capex=10, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-epc_electrolysis_pem = economics.annuity(capex=1, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-epc_chp_H2 = economics.annuity(capex=1, n=15, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-
-#epc_pv = economics.annuity(capex=10, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-#epc_solar_thermal = economics.annuity(capex=10, n=20, wacc=cfg.get('general_data', 'interest_rate'))*number_timesteps/8760
-
-##########################################################################
-# Create oemof objects
-##########################################################################
-
+        
 logging.info('Create oemof objects')
 
-## B U S E S  ##
+## Defining the Buses
+
 # create natural gas bus
 bgas = solph.Bus(label='bgas')
 
@@ -94,188 +94,180 @@ bH2 = solph.Bus(label='bH2')
 # add bgas and bel to energysystem
 energysystem.add(bgas, bel, bheat, bH2, beloff)
 
-## EXCESS - SINKS ##
-# create excess component for the electricity bus to allow overproduction
-excess_bel = solph.Sink(label='excess_bel',
-                    inputs={bel: solph.Flow()})
+# Defining and Adding Excess Sinks
+energysystem.add(solph.Sink(label='excess_bel', inputs={bel: solph.Flow()}))
 
-excess_beloff = solph.Sink(label='excess_beloff',
-                           inputs={beloff: solph.Flow()})
+energysystem.add(solph.Sink(label='excess_beloff',
+                           inputs={beloff: solph.Flow()}))
 
-# there are no costs for overproduction of electricity
-excess_bheat = solph.Sink(label='excess_bheat',
-                    inputs={bheat: solph.Flow()})
+energysystem.add(solph.Sink(label='excess_bheat',
+                            inputs={bheat: solph.Flow()}))
 
-# there are no costs for overproduction of electricity
-excess_bgas = solph.Sink(label='excess_bgas',
-                    inputs={bgas: solph.Flow()})
+energysystem.add(solph.Sink(label='excess_bgas', inputs={bgas: solph.Flow()}))
 
-# there are no costs for overproduction of electricity
-excess_bH2 = solph.Sink(label='excess_bH2',
-                    inputs={bH2: solph.Flow()})
+energysystem.add(solph.Sink(label='excess_bH2', inputs={bH2: solph.Flow()}))
 
-energysystem.add(excess_bel, excess_beloff, excess_bheat, excess_bgas, excess_bH2)
 
-## RESOURCES
+## Defining the Energy Sources
 
-# create source object representing the natural gas commodity (co2 emissions, price)
-gas_resource = solph.Source(label='gas_resource',
-                            outputs={bgas: solph.Flow(variable_costs=price_gas,
-                                                      emission=CO2_gas)})
+# create source object representing the natural gas commodity
+energysystem.add(solph.Source(
+    label='gas_resource',
+    outputs={bgas: solph.Flow(
+        variable_costs=cfg.get('prices_sources', 'price_gas'),
+        emission=cfg.get('emissions_sources', 'CO2_gas'))}))
 
 # create source object representing the electricity net
-elec_net = solph.Source(label='elec_net',
-                        outputs={bel: solph.Flow(variable_costs=price_elec,
-                                                 emission=CO2_elec)})
+energysystem.add(solph.Source(
+    label='elec_net',
+    outputs={bel: solph.Flow(
+        variable_costs=cfg.get('prices_sources', 'price_elec'),
+        emission=cfg.get('emissions_sources', 'CO2_elec'))}))
 
-# create source object representing the closed-off electricity
-elec_net_off = solph.Source(label='elec_net_off',
-                            outputs={beloff: solph.Flow(actual_value=data['elec_off'],
-                                                     fixed=True,
-                                                     nominal_value=factor_elec_off)})
-
-energysystem.add(gas_resource, elec_net, elec_net_off)
+# create source object representing the cut-off electricity
+energysystem.add(solph.Source(
+    label='elec_net_off',
+    outputs={beloff: solph.Flow(
+        actual_value=data['elec_off'], fixed=True,
+        nominal_value=cfg.get('source_scaling', 'factor_elec_off'))}))
 
 ## Help - Transformers
-trans_beloff = solph.Transformer(label='trans_beloff',
-                                   inputs={beloff: solph.Flow()},
-                                   outputs={bel: solph.Flow(nominal_value=None,
-                                                            variable_costs=price_elec_off,
-                                                            emissions=CO2_elec_off)},
-                                   conversion_factors={bel: 1})
+energysystem.add(solph.Transformer(
+    label='trans_beloff', inputs={beloff: solph.Flow()},
+    outputs={bel: solph.Flow(
+        nominal_value=None,
+        variable_costs=cfg.get('prices_sources', 'price_elec_off'),
+        emissions=cfg.get('emissions_sources', 'CO2_elec_off'))},
+    conversion_factors={bel: 1}))
 
 ## DEMAND
 # create simple sink object representing the electrical demand
-demand_el = solph.Sink(label='demand_el',
-                       inputs={bel: solph.Flow(actual_value=data['demand_el'],
-                                               fixed=True,
-                                               nominal_value=factor_elec)})
+energysystem.add(solph.Sink(
+    label='demand_el', inputs={bel: solph.Flow(
+        actual_value=data['demand_el'], fixed=True,
+        nominal_value=cfg.get('demand_scaling', 'elec'))}))
 
 # create simple sink object representing the heat demand
-demand_heat = solph.Sink(label='demand_heat',
-                         inputs={bheat: solph.Flow(actual_value=data['demand_heat'],
-                                                   fixed=True,
-                                                   nominal_value=factor_heat)})
+energysystem.add(solph.Sink(
+    label='demand_heat',
+    inputs={bheat: solph.Flow(
+        actual_value=data['demand_heat'], fixed=True,
+        nominal_value=cfg.get('demand_scaling', 'heat'))}))
 
-energysystem.add(demand_el, demand_heat, trans_beloff)
-
-## PV and SOLARTHERMAL
-# create fixed source object representing pv power plants
-# pv = solph.Source(label='pv',
-#                  outputs={bel: solph.Flow(actual_value=data['pv'],
-#                                           fixed=True,
-#                                           #nominal_value=400)})
-#                                           investment=solph.Investment(ep_costs=epc_pv),
-#                                           )})
-#
-# solar_thermal = solph.Source(label='solar_thermal',
-#                   outputs={bheat: solph.Flow(actual_value=data['pv'],
-#                                            fixed=True,
-#                                            #nominal_value=400)})
-#                                            investment=solph.Investment(ep_costs=epc_solar_thermal),
-#                                            )})
-#
-# energysystem.add(pv, solar_thermal)
 
 ## TRANSFORMERS
 
 # create a simple transformer object representing a chp plant
-chp_gas = solph.Transformer(label='chp_gas',
-                            inputs={bgas: solph.Flow()},
-                            outputs={bel: solph.Flow(nominal_value=None,
-                                                     investment=solph.Investment(ep_costs=epc_chp_gas),
-                                                     variable_costs=0),
-                                     bheat: solph.Flow(nominal_value=None,
-                                                       variable_costs=0)},
-                            conversion_factors={bel: 0.4,
-                                                bheat: 0.5})
+energysystem.add(solph.Transformer(
+    label='chp_gas',
+    inputs={bgas: solph.Flow()},
+    outputs={
+        bel: solph.Flow(nominal_value=None,
+                        investment=solph.Investment(ep_costs=epc_chp_gas)),
+        bheat: solph.Flow(nominal_value=None)},
+    conversion_factors={bel: 0.4,
+                        bheat: 0.5}))
 
-# create a simple transformer object representing a chp plant
-chp_H2 = solph.Transformer(label='chp_H2',
-                            inputs={bH2: solph.Flow()},
-                            outputs={bel: solph.Flow(nominal_value=None,
-                                                     investment=solph.Investment(ep_costs=epc_chp_H2),
-                                                     variable_costs=0),
-                                     bheat: solph.Flow(nominal_value=None,
-                                                       variable_costs=0)},
-                            conversion_factors={bel: 0.45,
-                                                bheat: 0.45})
+# create a simple transformer object representing a H2 chp
+energysystem.add(solph.Transformer(
+    label='chp_H2',
+    inputs={bH2: solph.Flow()},
+    outputs={
+        bel: solph.Flow(nominal_value=None,
+                        investment=solph.Investment(ep_costs=epc_chp_H2)),
+        bheat: solph.Flow(nominal_value=None)},
+    conversion_factors={bel: 0.45,
+                        bheat: 0.45}))
 
 # create a simple transformer object representing a heater
-boiler_gas = solph.Transformer(label='boiler_gas',
-                                inputs={bgas: solph.Flow()},
-                                outputs={bheat: solph.Flow(nominal_value=None,
-                                                           investment=solph.Investment(ep_costs=epc_boiler_gas),
-                                                           variable_costs=0)},
-                                conversion_factors={bheat: 0.9})
+energysystem.add(solph.Transformer(
+    label='boiler_gas',
+    inputs={bgas: solph.Flow()},
+    outputs={
+        bheat: solph.Flow(nominal_value=None, investment=solph.Investment(
+                ep_costs=epc_boiler_gas))},
+    conversion_factors={bheat: 0.9}))
 
-# create a simple transformer object representing a air heat pump with cop of 3.5
-heatpump_el = solph.Transformer(label='heatpump_el',
-                                inputs={bel: solph.Flow()},
-                                outputs={bheat: solph.Flow(nominal_value=None,
-                                                           investment=solph.Investment(ep_costs=epc_heatpump_el),
-                                                           variable_costs=0)},
-                                conversion_factors={bheat: 3})
-
-# heating_rod
-# heating_rod = solph.Transformer(label='heating_rod',
-#                                 inputs={bel: solph.Flow()},
-#                                 outputs={bheat: solph.Flow(nominal_value=None,
-#                                                            investment=solph.Investment(ep_costs=epc_heating_rod),
-#                                                            variable_costs=0)},
-#                                 conversion_factors={bheat: 0.98})
+# create a simple transformer object representing a air heat pump
+energysystem.add(solph.Transformer(
+    label='heatpump_el',
+    inputs={bel: solph.Flow()},
+    outputs={
+        bheat: solph.Flow(nominal_value=None, investment=solph.Investment(
+                ep_costs=epc_heatpump_el))},
+    conversion_factors={bheat: 3}))
 
 # power-to-gas
-electrolysis_pem = solph.Transformer(label='electrolysis_pem',
-                                     inputs={bel: solph.Flow()},
-                                     outputs={bH2: solph.Flow(nominal_value=None,
-                                                              investment=solph.Investment(ep_costs=epc_electrolysis_pem),
-                                                              variable_costs=0),
-                                              bheat: solph.Flow(nominal_value=None,
-                                                                variable_costs=0)},
-                                     conversion_factors={bH2: 0.6,
-                                                         bheat: 0.25})
+energysystem.add(solph.Transformer(
+    label='electrolysis_pem',
+    inputs={bel: solph.Flow()},
+    outputs={
+        bH2: solph.Flow(nominal_value=None, investment=solph.Investment(
+                ep_costs=epc_electrolysis_pem)),
+        bheat: solph.Flow(nominal_value=None)},
+    conversion_factors={bH2: 0.6,
+                        bheat: 0.25}))
 
-energysystem.add(chp_gas, chp_H2, boiler_gas, heatpump_el, electrolysis_pem)
+# Storages
+NAMES_Storages = [
+    {'name': 'storage_elec', 'bus': bel, 'epc': epc_storage_elec},
+    {'name': 'storage_heat', 'bus': bheat, 'epc': epc_storage_heat},
+    {'name': 'storage_H2', 'bus': bH2, 'epc': epc_storage_H2}]
 
+for data_set in NAMES_Storages:
+    name = data_set['name']
+    
+    energysystem.add(solph.components.GenericStorage(
+        label='{0}'.format(name),
+        inputs={data_set['bus']: solph.Flow()},
+        outputs={data_set['bus']: solph.Flow()},
+        capacity_loss=cfg.get(name, 'capacity_loss'),
+        initial_capacity=cfg.get(name, 'initial_capacity'),
+        invest_relation_input_capacity=cfg.get(
+            name, 'invest_relation_input_capacity'),
+        invest_relation_output_capacity=cfg.get(
+            name, 'invest_relation_output_capacity'),
+        inflow_conversion_factor=cfg.get(name, 'inflow_conversion_factor'),
+        outflow_conversion_factor=cfg.get(name, 'outflow_conversion_factor'),
+        investment=solph.Investment(ep_costs=data_set['epc'])))
+    
 
-## S T O R A G E S ##
-#####################
-# Electric Storage
-storage_elec = solph.components.GenericStorage(label='storage_elec',
-                                          inputs={bel: solph.Flow(variable_costs=0.0)},
-                                          outputs={bel: solph.Flow()},
-                                          capacity_loss=0.00,
-                                          initial_capacity=0.0,
-                                          invest_relation_input_capacity=0.7,
-                                          invest_relation_output_capacity=0.7,
-                                          inflow_conversion_factor=0.95,
-                                          outflow_conversion_factor=0.95,
-                                          investment=solph.Investment(ep_costs=epc_storage_elec))
-
-storage_heat = solph.components.GenericStorage(label='storage_heat',
-                                          inputs={bheat: solph.Flow(variable_costs=0.0)},
-                                          outputs={bheat: solph.Flow()},
-                                          capacity_loss=0.00000025,
-                                          initial_capacity=0,
-                                          invest_relation_input_capacity=1/4,
-                                          invest_relation_output_capacity=1/4,
-                                          inflow_conversion_factor=1,
-                                          outflow_conversion_factor=1,
-                                          investment=solph.Investment(ep_costs=epc_storage_heat))
-
-storage_H2 = solph.components.GenericStorage(label='storage_H2',
-                                          inputs={bH2: solph.Flow(variable_costs=0.0)},
-                                          outputs={bH2: solph.Flow()},
-                                          capacity_loss=0.00001,
-                                          initial_capacity=0,
-                                          invest_relation_input_capacity=0.1,
-                                          invest_relation_output_capacity=0.1,
-                                          inflow_conversion_factor=1,
-                                          outflow_conversion_factor=1,
-                                          investment=solph.Investment(ep_costs=epc_storage_H2))
-
-energysystem.add(storage_elec, storage_heat, storage_H2)
+ # Electric Storage
+#energysystem.add(solph.components.GenericStorage(
+#     label='storage_elec',
+#     inputs={bel: solph.Flow()},
+#     outputs={bel: solph.Flow()},
+#     capacity_loss=0.00,
+#     initial_capacity=0.0,
+#     invest_relation_input_capacity=0.7,
+#     invest_relation_output_capacity=0.7,
+#     inflow_conversion_factor=0.95,
+#     outflow_conversion_factor=0.95,
+#     investment=solph.Investment(ep_costs=epc_storage_elec)))
+# 
+#energysystem.add(solph.components.GenericStorage(
+#     label='storage_heat',
+#     inputs={bheat: solph.Flow()},
+#     outputs={bheat: solph.Flow()},
+#     capacity_loss=0.00000025,
+#     initial_capacity=0,
+#     invest_relation_input_capacity=0.25,
+#     invest_relation_output_capacity=0.25,
+#     inflow_conversion_factor=1,
+#     outflow_conversion_factor=1,
+#     investment=solph.Investment(ep_costs=epc_storage_heat)))
+# 
+#energysystem.add(solph.components.GenericStorage(
+#     label='storage_H2',
+#     inputs={bH2: solph.Flow()},
+#     outputs={bH2: solph.Flow()},
+#     capacity_loss=0.00001,
+#     initial_capacity=0,
+#     invest_relation_input_capacity=0.1,
+#     invest_relation_output_capacity=0.1,
+#     inflow_conversion_factor=1,
+#     outflow_conversion_factor=1,
+#     investment=solph.Investment(ep_costs=epc_storage_H2)))
 
 
 ##########################################################################
