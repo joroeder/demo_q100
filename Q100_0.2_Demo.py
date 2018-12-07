@@ -22,7 +22,9 @@ date_time_index = pd.date_range('1/1/2012',
 energysystem = solph.EnergySystem(timeindex=date_time_index)
 
 # Read Data-file
-data = pd.read_csv("test-data_normiert.csv", sep=";")
+#data = pd.read_csv("test-data_normiert.csv", sep=";")
+data = pd.read_csv(os.path.join(os.path.dirname(__file__),
+                                'test-data_normiert.csv'), sep=";")
 
 # Getting the interest rate used for all invest calculations
 rate = cfg.get('general_data', 'interest_rate')
