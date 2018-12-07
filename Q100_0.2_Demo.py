@@ -230,45 +230,6 @@ for data_set in NAMES_Storages:
         inflow_conversion_factor=cfg.get(name, 'inflow_conversion_factor'),
         outflow_conversion_factor=cfg.get(name, 'outflow_conversion_factor'),
         investment=solph.Investment(ep_costs=data_set['epc'])))
-    
-
- # Electric Storage
-#energysystem.add(solph.components.GenericStorage(
-#     label='storage_elec',
-#     inputs={bel: solph.Flow()},
-#     outputs={bel: solph.Flow()},
-#     capacity_loss=0.00,
-#     initial_capacity=0.0,
-#     invest_relation_input_capacity=0.7,
-#     invest_relation_output_capacity=0.7,
-#     inflow_conversion_factor=0.95,
-#     outflow_conversion_factor=0.95,
-#     investment=solph.Investment(ep_costs=epc_storage_elec)))
-# 
-#energysystem.add(solph.components.GenericStorage(
-#     label='storage_heat',
-#     inputs={bheat: solph.Flow()},
-#     outputs={bheat: solph.Flow()},
-#     capacity_loss=0.00000025,
-#     initial_capacity=0,
-#     invest_relation_input_capacity=0.25,
-#     invest_relation_output_capacity=0.25,
-#     inflow_conversion_factor=1,
-#     outflow_conversion_factor=1,
-#     investment=solph.Investment(ep_costs=epc_storage_heat)))
-# 
-#energysystem.add(solph.components.GenericStorage(
-#     label='storage_H2',
-#     inputs={bH2: solph.Flow()},
-#     outputs={bH2: solph.Flow()},
-#     capacity_loss=0.00001,
-#     initial_capacity=0,
-#     invest_relation_input_capacity=0.1,
-#     invest_relation_output_capacity=0.1,
-#     inflow_conversion_factor=1,
-#     outflow_conversion_factor=1,
-#     investment=solph.Investment(ep_costs=epc_storage_H2)))
-
 
 ##########################################################################
 # Optimise the energy system
