@@ -1,1 +1,2 @@
-Dies ist ein Test zur Demonstration von git.
+Dieser code war falsch.
+Jetzt ist es richtig.
