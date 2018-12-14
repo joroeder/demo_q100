@@ -36,21 +36,6 @@ data = pd.read_csv(os.path.join(path_to_data,
 # Getting the interest rate used for all invest calculations
 rate = cfg.get('general_data', 'interest_rate')
 
-epc_storage_heat = economics.annuity(
-    capex=cfg.get('fix_costs', 'storage_heat'),
-    n=cfg.get('lifetime', 'storage_heat'),
-    wacc=rate)*number_timesteps/8760
-        
-epc_storage_elec = economics.annuity(
-    capex=cfg.get('fix_costs', 'storage_elec'),
-    n=cfg.get('lifetime', 'storage_elec'),
-    wacc=rate)*number_timesteps/8760
-
-epc_storage_H2 = economics.annuity(
-    capex=cfg.get('fix_costs', 'storage_H2'),
-    n=cfg.get('lifetime', 'storage_H2'),
-    wacc=rate)*number_timesteps/8760
-
 epc_chp_gas = economics.annuity(
     capex=cfg.get('fix_costs', 'chp_gas'),
     n=cfg.get('lifetime', 'chp_gas'),
@@ -113,7 +98,6 @@ energysystem.add(solph.Sink(label='excess_bH2', inputs={bH2: solph.Flow()}))
 
 
 ## Defining the Energy Sources
-
 # create source object representing the natural gas commodity
 energysystem.add(solph.Source(
     label='gas_resource',
@@ -217,28 +201,37 @@ energysystem.add(solph.Transformer(
                         bheat: cfg.get('conversion_factors',
                                        'electrolysis_pem_bheat')}))
 
-# Storages
-NAMES_Storages = [
-    {'name': 'storage_elec', 'bus': bel, 'epc': epc_storage_elec},
-    {'name': 'storage_heat', 'bus': bheat, 'epc': epc_storage_heat},
-    {'name': 'storage_H2', 'bus': bH2, 'epc': epc_storage_H2}]
+# Read Storage Data
+df_storages_data = pd.read_excel(os.path.join(
+        os.path.expanduser("~"), path_to_data, 'Parameter.xlsx'),
+    sheet_name='Storages')
 
-for data_set in NAMES_Storages:
-    name = data_set['name']
+#Convert Storage Data to Dict
+STORAGES = df_storages_data.set_index('name').T.to_dict('dict')
+
+# Generate Storages from Storage Dict
+for storage in STORAGES:
+    
+    epc_storage = economics.annuity(
+    capex=STORAGES[storage]['capex'],
+    n=STORAGES[storage]['n'],
+    wacc=rate)*number_timesteps/8760
     
     energysystem.add(solph.components.GenericStorage(
-        label='{0}'.format(name),
-        inputs={data_set['bus']: solph.Flow()},
-        outputs={data_set['bus']: solph.Flow()},
-        capacity_loss=cfg.get(name, 'capacity_loss'),
-        initial_capacity=cfg.get(name, 'initial_capacity'),
-        invest_relation_input_capacity=cfg.get(
-            name, 'invest_relation_input_capacity'),
-        invest_relation_output_capacity=cfg.get(
-            name, 'invest_relation_output_capacity'),
-        inflow_conversion_factor=cfg.get(name, 'inflow_conversion_factor'),
-        outflow_conversion_factor=cfg.get(name, 'outflow_conversion_factor'),
-        investment=solph.Investment(ep_costs=data_set['epc'])))
+        label=storage,
+        inputs={eval(STORAGES[storage]['bus']): solph.Flow()},
+        outputs={eval(STORAGES[storage]['bus']): solph.Flow()},
+        capacity_loss=STORAGES[storage]['capacity_loss'],
+        initial_capacity=STORAGES[storage]['initial_capacity'],
+        invest_relation_input_capacity=
+            STORAGES[storage]['invest_relation_input_capacity'],
+        invest_relation_output_capacity=
+            STORAGES[storage]['invest_relation_output_capacity'],
+        inflow_conversion_factor=
+            STORAGES[storage]['inflow_conversion_factor'],
+        outflow_conversion_factor=
+            STORAGES[storage]['outflow_conversion_factor'],
+        investment=solph.Investment(ep_costs=epc_storage)))
 
 
 ### Optimise the energy system
