@@ -33,8 +33,7 @@ def get_ini_filenames(additional_paths=None):
     paths.append(os.path.join(os.path.dirname(__file__)))
     if additional_paths is not None:
         paths.extend(additional_paths)
-    paths.append(os.path.join(os.path.expanduser("~"),
-                'Seafile/Meine Bibliothek/c_oemof_work/05_github/demo_data'))
+    paths.append(os.path.join(os.path.expanduser("~"), 'oemof/q100_ini'))
 
     for p in paths:
         for f in os.listdir(p):

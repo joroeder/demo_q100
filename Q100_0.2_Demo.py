@@ -1,3 +1,10 @@
+"""oemof application for research project quarree100.
+
+Copyright (c) 2018 Quarree100 AB-3 Project-Team
+
+SPDX-License-Identifier: GPL-3.0-or-later
+"""
+
 # Default logger of oemof
 from oemof.tools import logger
 from oemof.tools import economics
@@ -22,7 +29,9 @@ date_time_index = pd.date_range('1/1/2012',
 energysystem = solph.EnergySystem(timeindex=date_time_index)
 
 # Read Data-file
-data = pd.read_csv("test-data_normiert.csv", sep=";")
+path_to_data = os.path.join(os.path.expanduser("~"), cfg.get('paths', 'data'))
+data = pd.read_csv(os.path.join(path_to_data,
+                                'test-data_normiert.csv'), sep=";")
 
 # Getting the interest rate used for all invest calculations
 rate = cfg.get('general_data', 'interest_rate')
