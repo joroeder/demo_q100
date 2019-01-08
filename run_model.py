@@ -28,6 +28,14 @@ heat_bus = outputlib.views.node(results, 'bheat')["sequences"]
 H2_bus = outputlib.views.node(results, 'bH2')["sequences"]
 Elec_off_bus = outputlib.views.node(results, 'beloff')["sequences"]
 
+# get the SoC of all storages
+soc_H2 = outputlib.views.node(results, 'storage_H2')['sequences']
+soc_H2 = soc_H2.drop(soc_H2.columns[[0, 2]], 1)
+soc_elec = outputlib.views.node(results, 'storage_elec')['sequences']
+soc_elec = soc_elec.drop(soc_elec.columns[[0, 2]], 1)
+soc_heat = outputlib.views.node(results, 'storage_heat')['sequences']
+soc_heat = soc_heat.drop(soc_heat.columns[[0, 2]], 1)
+
 # Define dataframe to store and export specific energy-flows
 df_ges = pd.concat([electricity_bus, gas_bus, heat_bus, H2_bus, Elec_off_bus],
                    axis=1)
@@ -39,9 +47,9 @@ p_electrolysis_pem = outputlib.views.node(
     results, 'electrolysis_pem')["scalars"][0]
 p_boiler_gas = outputlib.views.node(results, 'boiler_gas')["scalars"][0]
 p_heatpump_el = outputlib.views.node(results, 'heatpump_el')["scalars"][0]
-c_storage_elec = outputlib.views.node(results, 'storage_elec')["scalars"][1]
-c_storage_heat = outputlib.views.node(results, 'storage_heat')["scalars"][1]
-c_storgae_H2 = outputlib.views.node(results, 'storage_H2')["scalars"][1]
+c_storage_elec = outputlib.views.node(results, 'storage_elec')["scalars"][0]
+c_storage_heat = outputlib.views.node(results, 'storage_heat')["scalars"][0]
+c_storgae_H2 = outputlib.views.node(results, 'storage_H2')["scalars"][0]
 
 df_invest_ges = pd.DataFrame([[
     p_chp_gas, p_chp_H2, p_electrolysis_pem, p_boiler_gas, p_heatpump_el,
@@ -63,6 +71,12 @@ with pd.ExcelWriter(os.path.join(path_to_results, filename)) as xls:
 electricity_bus.plot(kind='line', drawstyle="steps-mid", subplots=False,
                      sharey=True)
 gas_bus.plot(kind='line', drawstyle="steps-mid", subplots=False, sharey=True)
+plt.show()
+
+# plot the SoC of all storages
+soc_H2.plot(kind='line', drawstyle="steps-mid", subplots=True, sharey=True)
+soc_elec.plot(kind='line', drawstyle="steps-mid", subplots=True, sharey=True)
+soc_heat.plot(kind='line', drawstyle="steps-mid", subplots=True, sharey=True)
 plt.show()
 
 # plot the installed Transformer Capacities

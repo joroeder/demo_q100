@@ -223,7 +223,6 @@ def q100_demo():
             inputs={eval(storages[storage]['bus']): solph.Flow()},
             outputs={eval(storages[storage]['bus']): solph.Flow()},
             capacity_loss=storages[storage]['capacity_loss'],
-            initial_capacity=storages[storage]['initial_capacity'],
             invest_relation_input_capacity=storages[
                 storage]['invest_relation_input_capacity'],
             invest_relation_output_capacity=storages[
