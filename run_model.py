@@ -7,7 +7,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 """
 
 import setup_solve_model
-import plotting
+import postprocessing
 import config as cfg
 import os
 
@@ -28,13 +28,16 @@ e_sys = setup_solve_model.setup_es(excel_nodes=node_data)
 results = setup_solve_model.solve_es(energysystem=e_sys, excel_nodes=node_data)
 
 # plot the buses
-plotting.plot_buses(res=results, es=e_sys)
+postprocessing.plot_buses(res=results, es=e_sys)
 
 # plot the investments in transformer
-plotting.plot_trans_invest(res=results, es=e_sys)
+postprocessing.plot_trans_invest(res=results, es=e_sys)
 
 # plot the storage SoC(t)
-plotting.plot_storages_SoC(res=results, es=e_sys)
+postprocessing.plot_storages_soc(res=results, es=e_sys)
 
 # plot the installed storage capacities
-plotting.plot_storages_invest(res=results, es=e_sys)
+postprocessing.plot_storages_invest(res=results, es=e_sys)
+
+# expoprt the results to excel
+postprocessing.export_excel(res=results, es=e_sys)

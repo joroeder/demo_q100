@@ -262,7 +262,8 @@ def create_comp_lists(es=None):
 
     for n in es.nodes:
 
-        type_name = str(type(n)).replace("<class 'oemof.solph.", "").replace("'>", "")
+        type_name =\
+            str(type(n)).replace("<class 'oemof.solph.", "").replace("'>", "")
 
         if type_name == "network.Bus":
             l_buses.append(n.label)
@@ -279,21 +280,3 @@ def create_comp_lists(es=None):
                  }
 
     return comp_dict
-
-
-# # df_invest_ges = pd.DataFrame([[
-# #     p_chp_gas, p_chp_H2, p_electrolysis_pem, p_boiler_gas, p_heatpump_el,
-# #     c_storage_elec, c_storage_heat, c_storgae_H2
-# #     ]],
-# #     columns=['p_chp_gas', 'p_chp_H2', 'p_electrolysis_pem',
-# #              'p_boiler_gas', 'p_heatpump_el', 'c_storage_elec',
-# #              'c_storage_heat', 'c_storgae_H2'])
-#
-# # the result_gesamt df is exported in excel
-# path_to_results = os.path.join(os.path.expanduser("~"),
-#                                cfg.get('paths', 'results'))
-# # filename = 'results.xlsx'
-# # with pd.ExcelWriter(os.path.join(path_to_results, filename)) as xls:
-# #     df_ges.to_excel(xls, sheet_name='Timeseries')
-# #     df_invest_ges.to_excel(xls, sheet_name='Invest')
-#
